@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJI Mic Key - Final Layout</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+            --bg-color: #e5e7eb;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --font-mono: "Courier New", Courier, monospace;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: var(--font-family);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-window {
+            width: 760px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1), 0 3px 10px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 标题栏 (无诊断按钮) */
+        .title-bar {
+            background: #ffffff; padding: 10px 16px; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .title-left { display: flex; align-items: center; gap: 10px; }
+        .logo {
+            width: 22px; height: 22px; background-color: #2563eb; border-radius: 6px;
+            display: flex; justify-content: center; align-items: center; color: white; font-size: 14px; font-weight: 900; font-family: 'Arial Rounded MT Bold', sans-serif;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.4);
+        }
+        .title-bar h1 { font-size: 13px; font-weight: 600; color: #374151; }
+
+        .window-controls { display: flex; align-items: center; }
+        .win-btn {
+            width: 36px; height: 32px; border: none; background: transparent;
+            color: #6b7280; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.15s;
+        }
+        .win-btn:hover { background-color: #f3f4f6; color: #111827; }
+        .win-btn.close:hover { background-color: #ef4444; color: white; }
+        .win-btn svg { width: 10px; height: 10px; stroke-width: 1.5; }
+
+        /* 主体网格布局 */
+        .content {
+            padding: 16px; background-color: #f8fafc;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+            align-items: stretch;
+        }
+
+        .col-left, .col-right { display: flex; flex-direction: column; gap: 12px; }
+
+        /* 卡片通用 */
+        .card {
+            background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px;
+            padding: 16px; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .card-title { font-size: 13px; font-weight: 600; color: var(--text-main); }
+
+        /* 左侧：设备连接 */
+        .device-info { display: flex; align-items: center; justify-content: space-between; }
+        .device-left { display: flex; align-items: center; gap: 10px; }
+        .status-dot {
+            width: 8px; height: 8px; background-color: var(--success-color); border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .device-name { font-weight: 600; font-size: 13px; }
+        .device-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+        /* 按钮 */
+        .btn {
+            padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s ease; border: 1px solid transparent; outline: none;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .btn-secondary { background-color: #ffffff; border-color: var(--border-color); color: var(--text-main); }
+        .btn-secondary:hover { background-color: #f9fafb; border-color: #d1d5db; }
+        .btn-primary { background-color: var(--primary-color); color: #ffffff; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3); }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-danger { background-color: var(--danger-color); color: #ffffff; box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3); }
+
+        /* 左侧：麦克风波形卡片 */
+        .mic-card { flex-grow: 1; }
+        .volume-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px; }
+        .volume-value {
+            font-family: var(--font-mono); font-weight: 600; font-size: 12px;
+            color: var(--primary-color); background-color: #eff6ff; padding: 2px 8px; border-radius: 4px; min-width: 75px; text-align: center;
+        }
+        .volume-bar {
+            height: 12px; background-color: #f3f4f6; border-radius: 6px; overflow: hidden;
+            display: flex; gap: 2px; padding: 2px; margin-bottom: 4px;
+        }
+        .volume-segment { flex: 1; background-color: #10b981; border-radius: 2px; transition: opacity 0.1s; }
+        .volume-segment.inactive { background-color: #e5e7eb; }
+
+        .waveform-display {
+            flex-grow: 1; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px;
+            margin-top: 12px; display: flex; align-items: center; padding: 0 10px;
+            position: relative; overflow: hidden; min-height: 100px;
+        }
+        .waveform-display::before {
+            content: ''; position: absolute; top: 50%; left: 10px; right: 10px; height: 1px; background-color: #e2e8f0; z-index: 1;
+        }
+        .waveform-mock {
+            position: absolute; top: 0; bottom: 0; left: 10px; right: 10px;
+            display: flex; align-items: center; gap: 2px; z-index: 2;
+        }
+        .wf-bar {
+            flex: 1; background-color: #60a5fa; border-radius: 2px; height: 2px;
+            transition: height 0.05s ease, background-color 0.1s;
+        }
+
+        /* 右侧：映射区域 */
+        .mapping-horizontal-area {
+            display: flex; align-items: center; justify-content: center;
+            gap: 20px;
+            margin-top: 10px; margin-bottom: 20px; padding: 0 10px;
+        }
+
+        /* 设备物理按键还原 */
+        .side-key-device {
+            width: 70px; height: 120px; background: linear-gradient(135deg, #374151 0%, #111827 100%);
+            border-radius: 12px; position: relative; box-shadow: inset 0 2px 5px rgba(255,255,255,0.05), 0 8px 15px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid #1f2937;
+            cursor: pointer; gap: 12px; flex-shrink: 0;
+        }
+
+        /* LED 指示灯 */
+        .led-indicator {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            width: 16px; height: 6px; border-radius: 4px;
+            background-color: #1f2937; transition: all 0.1s; box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .led-indicator.active {
+            background-color: #10b981; box-shadow: 0 0 10px 2px rgba(16, 185, 129, 0.6), inset 0 0 2px #fff;
+        }
+
+        .conn-btn {
+            width: 32px; height: 44px; background: linear-gradient(180deg, #4b5563 0%, #1f2937 100%);
+            border-radius: 16px; display: flex; justify-content: center; align-items: center;
+            border: 1px solid #4b5563; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+            color: #9ca3af; transition: all 0.1s; margin-top: 10px;
+        }
+        .conn-btn svg { width: 18px; height: 18px; }
+
+        .power-btn {
+            width: 32px; height: 32px; background: linear-gradient(180deg, #4b5563 0%, #1f2937 100%);
+            border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            border: 1px solid #4b5563; box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
+            color: #9ca3af;
+        }
+        .power-btn svg { width: 16px; height: 16px; }
+
+        .side-key-device.pressed .conn-btn {
+            transform: translateY(2px); box-shadow: inset 0 1px 2px rgba(0,0,0,0.8); color: #e5e7eb;
+        }
+
+        /* 键帽组合 */
+        .keycaps-container {
+            flex: 1; display: flex; justify-content: center; align-items: center;
+            background-color: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 20px 12px;
+            min-height: 80px;
+        }
+        .keycaps { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: center; }
+        .keycap {
+            background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+            border: 1px solid #cbd5e1; border-bottom-width: 3px; border-radius: 6px;
+            padding: 8px 12px; font-size: 14px; font-weight: 700; color: #334155;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; white-space: nowrap;
+        }
+        .key-plus { color: #94a3b8; font-weight: bold; font-size: 14px; }
+
+        .recording-hint {
+            font-size: 13px; color: var(--primary-color); font-weight: 600; animation: pulseText 1.5s infinite;
+        }
+        @keyframes pulseText { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* 开关 */
+        .toggle-wrapper { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+        .toggle-input { display: none; }
+        .toggle-switch {
+            width: 32px; height: 18px; background-color: #e5e7eb; border-radius: 18px; position: relative; transition: background-color 0.3s;
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+            background-color: #ffffff; border-radius: 50%; transition: transform 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .toggle-input:checked + .toggle-switch { background-color: var(--primary-color); }
+        .toggle-input:checked + .toggle-switch::after { transform: translateX(14px); }
+
+        .hint-text { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+        .action-footer {
+            margin-top: auto; display: flex; justify-content: space-between; align-items: center;
+            padding-top: 12px; border-top: 1px dashed var(--border-color);
+        }
+
+        /* 底部状态栏 */
+        .status-bar {
+            padding: 10px 16px; background-color: #ffffff; border-top: 1px solid var(--border-color);
+            font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;
+        }
+        .status-left { display: flex; align-items: center; gap: 12px; }
+        .status-indicator { display: flex; align-items: center; gap: 4px; color: var(--success-color); font-weight: 600; }
+        .status-indicator::before {
+            content: ''; width: 6px; height: 6px; background-color: var(--success-color); border-radius: 50%;
+        }
+        .status-highlight { color: var(--primary-color); font-weight: 600; }
+
+        /* Toast */
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px);
+            background: rgba(31, 41, 55, 0.9); color: white; padding: 10px 20px;
+            border-radius: 8px; font-size: 13px; opacity: 0; pointer-events: none;
+            transition: all 0.3s; z-index: 3000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            backdrop-filter: blur(4px); display: flex; align-items: center; gap: 8px;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+        /* === 诊断弹窗样式 === */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(3px);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+        }
+        .modal-overlay.show { opacity: 1; pointer-events: auto; }
+        .modal-content {
+            background: #ffffff; border-radius: 12px; width: 680px; max-width: 95%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2); display: flex; flex-direction: column;
+            transform: scale(0.95); transition: transform 0.2s; border: 1px solid #e2e8f0;
+        }
+        .modal-overlay.show .modal-content { transform: scale(1); }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px 20px; border-bottom: 1px solid var(--border-color);
+        }
+        .modal-title { font-size: 15px; font-weight: 700; color: #1e293b; }
+        .modal-actions { display: flex; gap: 10px; }
+        .modal-body { padding: 16px 20px; }
+        .log-console {
+            background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;
+            height: 280px; overflow-y: auto; padding: 12px;
+            font-family: var(--font-mono); font-size: 12px; color: #334155;
+            line-height: 1.6; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .log-console::-webkit-scrollbar { width: 8px; }
+        .log-console::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .log-console::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .log-console::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .log-line { margin-bottom: 2px; word-break: break-all; }
+        .log-time { color: #94a3b8; margin-right: 8px; }
+
+        .modal-footer {
+            padding: 12px 20px; font-size: 12px; color: #64748b;
+            border-top: 1px solid var(--border-color); background: #f8fafc; border-radius: 0 0 12px 12px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="toast" class="toast">🎯 触发提醒：按键已按下！</div>
+
+<!-- 诊断弹窗 -->
+<div id="diagnostic-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">实时按键输出</div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="showToast('已导出诊断报告到桌面')">导出按键诊断</button>
+                <button class="btn btn-secondary" onclick="restartDiagnostics()">重启按键监听</button>
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="log-console" id="log-console"></div>
+        </div>
+        <div class="modal-footer">
+            <span>输出仅含媒体键和 DJI HID 控制报告；不记录普通文字或音频。</span>
+            <button class="btn btn-primary" onclick="closeDiagnostics()" style="padding: 4px 16px;">关闭</button>
+        </div>
+    </div>
+</div>
+
+<div class="app-window">
+    <!-- 标题栏 (纯窗口控制) -->
+    <div class="title-bar">
+        <div class="title-left">
+            <div class="logo">M</div>
+            <h1>DJI Mic Key</h1>
+        </div>
+        <div class="window-controls">
+            <button class="win-btn" title="最小化"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor"><path d="M2 5h6"/></svg></button>
+            <button class="win-btn" title="最大化"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor"><rect x="2" y="2" width="6" height="6"/></svg></button>
+            <button class="win-btn close" title="关闭" onclick="this.closest('.app-window').style.display='none'"><svg viewBox="0 0 10 10" fill="none" stroke="currentColor"><path d="M2 2l6 6M8 2l-6 6"/></svg></button>
+        </div>
+    </div>
+
+    <div class="content">
+        <!-- 左列 -->
+        <div class="col-left">
+            <!-- 设备连接 -->
+            <div class="card" style="padding: 12px 16px;">
+                <div class="device-info">
+                    <div class="device-left">
+                        <div class="status-dot"></div>
+                        <div>
+                            <div class="device-name">DJI Mic Mini 接收器已连接</div>
+                            <div class="device-desc">麦克风 (Wireless Mic Rx) · USB 2CA3:4011</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="showToast('🔄 正在刷新设备...')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                        刷新
+                    </button>
+                </div>
+            </div>
+
+            <!-- 麦克风电平与波形 -->
+            <div class="card mic-card" style="padding: 12px 16px;">
+                <div class="card-header" style="margin-bottom: 6px;">
+                    <div class="card-title">麦克风输入电平</div>
+                    <button class="btn btn-secondary" id="mic-btn" style="font-size: 11px; padding: 2px 8px;">启动测试</button>
+                </div>
+                <div class="volume-header" style="margin-bottom: 4px;">
+                    <span class="hint-text">实时输入监测</span>
+                    <div class="volume-value" id="db-value">-59.9 dBFS</div>
+                </div>
+                <div class="volume-bar" id="volume-bar"></div>
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted);">
+                    <span>-60</span><span>-30</span><span>0 dBFS</span>
+                </div>
+                <div class="waveform-display">
+                    <div class="waveform-mock" id="waveform-mock"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右列 -->
+        <div class="col-right">
+            <!-- 连接键映射 -->
+            <div class="card" style="padding: 16px;">
+                <div class="card-header" style="margin-bottom: 0;">
+                    <div class="card-title">连接键映射</div>
+                    <label class="toggle-wrapper">
+                        <input type="checkbox" class="toggle-input" checked>
+                        <span class="toggle-switch"></span>
+                        启用映射
+                    </label>
+                </div>
+
+                <div class="mapping-horizontal-area">
+                    <div class="side-key-device" id="physical-device">
+                        <div class="led-indicator" id="led"></div>
+                        <div class="conn-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                            </svg>
+                        </div>
+                        <div class="power-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                                <line x1="12" y1="2" x2="12" y2="12"></line>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="keycaps-container" id="keycaps-container">
+                        <div class="keycaps" id="display-keycaps">
+                            <div class="keycap">左 Ctrl</div>
+                            <span class="key-plus">+</span>
+                            <div class="keycap">左 Alt</div>
+                            <span class="key-plus">+</span>
+                            <div class="keycap">F9</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-footer">
+                    <div class="hint-text" style="width: 160px;">微信输入法请设置相同快捷键；建议使用 Ctrl+Alt+F9。</div>
+                    <button id="toggle-record-btn" class="btn btn-primary" style="padding: 8px 20px; font-size: 13px; width: 120px;">
+                        <svg id="record-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg>
+                        开始录制
+                    </button>
+                </div>
+            </div>
+
+            <!-- 开机自动启动 & 诊断按钮 -->
+            <div class="card" style="padding: 10px 16px; display: flex; flex-direction: row; justify-content: space-between; align-items: center;">
+                <label class="toggle-wrapper">
+                    <input type="checkbox" class="toggle-input" checked>
+                    <span class="toggle-switch"></span>
+                    <div>
+                        <div style="font-size: 13px; font-weight: 500;">开机自动启动</div>
+                        <div class="hint-text">已开启，下次登录系统后自动运行</div>
+                    </div>
+                </label>
+                <!-- 诊断按钮完美居于红框位置 -->
+                <button class="btn btn-secondary" onclick="openDiagnostics()" style="padding: 5px 10px; font-size: 11px; height: 28px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                    诊断
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部状态栏 -->
+    <div class="status-bar">
+        <div class="status-left">
+            <span class="status-indicator" id="status-text">快捷键监听已就绪</span>
+            <span>映射已启用</span>
+        </div>
+        <div>
+            已触发 <span class="status-highlight">51</span> 次 · 最近 <span class="status-highlight">08:53:06</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // === 诊断系统逻辑 ===
+    const modal = document.getElementById('diagnostic-modal');
+    const logConsole = document.getElementById('log-console');
+
+    const mockLogs = [
+        { time: '00042358', text: 'RAW DJI HID bytes=03-00-00-00-01-00-00-00-06-00-00' },
+        { time: '00042360', text: 'LOWLEVEL Vk=AF scan=0 flags=11 own=False enabled=True buttonReady=True' },
+        { time: '00042361', text: 'DECISION suppress=True trigger=False' },
+        { time: '00042361', text: 'LOWLEVEL Vk=AF scan=0 flags=91 own=False enabled=True buttonReady=True' },
+        { time: '00042361', text: 'DECISION suppress=True trigger=True' },
+        { time: '00042417', text: 'SEND attempt target=左 Ctrl + 左 Win + 左 Alt' },
+        { time: '00042423', text: 'SEND accepted by windows (not a recognition acknowledgement)' },
+        { time: '00060011', text: 'HOOK end probe acknowledged=True' },
+        { time: '00060014', text: 'END Enabled: True | HID button ready: True | Audio endpoint ready: True | Capture name: 麦克风' }
+    ];
+
+    function openDiagnostics() {
+        modal.classList.add('show');
+        logConsole.innerHTML = '';
+        mockLogs.forEach(log => appendLog(log.time, log.text));
+        logConsole.scrollTop = logConsole.scrollHeight;
+    }
+
+    function closeDiagnostics() {
+        modal.classList.remove('show');
+    }
+
+    function appendLog(time, text) {
+        const div = document.createElement('div');
+        div.className = 'log-line';
+        div.innerHTML = `<span class="log-time">${time}</span>${text}`;
+        logConsole.appendChild(div);
+    }
+
+    function restartDiagnostics() {
+        logConsole.innerHTML = '';
+        showToast('🔄 按键监听已重启');
+        setTimeout(() => {
+            mockLogs.forEach(log => appendLog(log.time, log.text));
+            logConsole.scrollTop = logConsole.scrollHeight;
+        }, 300);
+    }
+
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeDiagnostics();
+    });
+
+
+    // === 核心交互逻辑 ===
+    const toast = document.getElementById('toast');
+    let toastTimeout;
+    function showToast(msg) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => { toast.classList.remove('show'); }, 2000);
+    }
+
+    const physicalDevice = document.getElementById('physical-device');
+    const led = document.getElementById('led');
+    const statusText = document.getElementById('status-text');
+    const toggleRecordBtn = document.getElementById('toggle-record-btn');
+    const displayKeycaps = document.getElementById('display-keycaps');
+
+    let isRecording = false;
+    let recordedKeys = [];
+
+    function formatKeyName(key, code) {
+        if (key === ' ') return '空格';
+        if (key === 'Control') return code.includes('Right') ? '右 Ctrl' : '左 Ctrl';
+        if (key === 'Shift') return code.includes('Right') ? '右 Shift' : '左 Shift';
+        if (key === 'Alt') return code.includes('Right') ? '右 Alt' : '左 Alt';
+        if (key === 'Escape') return 'Esc';
+        if (key.includes('Arrow')) return key.replace('Arrow', '方向');
+        if (code.includes('Numpad')) return '小键盘 ' + key;
+        return key.toUpperCase();
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (isRecording) {
+            e.preventDefault();
+            if (!e.repeat) {
+                const keyName = formatKeyName(e.key, e.code);
+                if (!recordedKeys.includes(keyName)) {
+                    recordedKeys.push(keyName);
+                    updateRecordedUI();
+                }
+            }
+            return;
+        }
+
+        if ((e.code === 'Space' || e.key.toLowerCase() === 'a') && !e.repeat) {
+            e.preventDefault();
+            physicalDevice.classList.add('pressed');
+            led.classList.add('active');
+            statusText.textContent = '按键触发中...';
+            statusText.style.color = 'var(--primary-color)';
+            showToast('🎯 触发提醒：按键已按下！');
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (!isRecording && (e.code === 'Space' || e.key.toLowerCase() === 'a')) {
+            physicalDevice.classList.remove('pressed');
+            led.classList.remove('active');
+            statusText.textContent = '快捷键监听已就绪';
+            statusText.style.color = 'var(--success-color)';
+        }
+    });
+
+    physicalDevice.addEventListener('mousedown', () => {
+        physicalDevice.classList.add('pressed');
+        led.classList.add('active');
+    });
+    physicalDevice.addEventListener('mouseup', () => {
+        physicalDevice.classList.remove('pressed');
+        led.classList.remove('active');
+    });
+    physicalDevice.addEventListener('mouseleave', () => {
+        physicalDevice.classList.remove('pressed');
+        led.classList.remove('active');
+    });
+
+    function updateRecordedUI() {
+        if (recordedKeys.length === 0) {
+            displayKeycaps.innerHTML = '<span class="recording-hint">请按下快捷键...</span>';
+        } else {
+            let html = '';
+            recordedKeys.forEach((key, index) => {
+                html += `<div class="keycap">${key}</div>`;
+                if (index < recordedKeys.length - 1) {
+                    html += `<span class="key-plus">+</span>`;
+                }
+            });
+            displayKeycaps.innerHTML = html;
+        }
+    }
+
+    toggleRecordBtn.addEventListener('click', () => {
+        isRecording = !isRecording;
+
+        if (isRecording) {
+            recordedKeys = [];
+            updateRecordedUI();
+            toggleRecordBtn.className = 'btn btn-danger';
+            toggleRecordBtn.innerHTML = '<svg id="record-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg> 保存并结束';
+            showToast('⏺ 录制中，请敲击键盘...');
+        } else {
+            toggleRecordBtn.className = 'btn btn-primary';
+            toggleRecordBtn.innerHTML = '<svg id="record-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="8"/></svg> 开始录制';
+
+            if (recordedKeys.length === 0) {
+                displayKeycaps.innerHTML = `
+                    <div class="keycap">左 Ctrl</div>
+                    <span class="key-plus">+</span>
+                    <div class="keycap">左 Alt</div>
+                    <span class="key-plus">+</span>
+                    <div class="keycap">F9</div>
+                `;
+                showToast('⚠️ 未检测到按键，已恢复默认映射');
+            } else {
+                showToast(`💾 录制成功！已保存为: ${recordedKeys.join(' + ')}`);
+            }
+        }
+    });
+
+
+    // === 音频波形处理 ===
+    const micBtn = document.getElementById('mic-btn');
+    const dbValue = document.getElementById('db-value');
+    const volumeBar = document.getElementById('volume-bar');
+    const waveformMock = document.getElementById('waveform-mock');
+
+    for (let i = 0; i < 24; i++) {
+        const seg = document.createElement('div');
+        seg.className = 'volume-segment inactive';
+        volumeBar.appendChild(seg);
+    }
+    const segments = document.querySelectorAll('.volume-segment');
+
+    const wfBars = [];
+    for (let i = 0; i < 50; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'wf-bar';
+        bar.style.height = `2px`;
+        waveformMock.appendChild(bar);
+        wfBars.push(bar);
+    }
+
+    let audioContext, analyser, dataArray;
+    let isMicOn = false;
+    let animationId;
+    let simulationPhase = 0;
+
+    let isSimulating = true;
+    runWaveform();
+
+    function simulateWaveform() {
+        simulationPhase += 0.1;
+        wfBars.forEach((bar, index) => {
+            const wave = Math.sin(simulationPhase + index * 0.2) * 15 + 15;
+            const noise = Math.random() * 10;
+            const edgeFade = Math.sin((index / wfBars.length) * Math.PI);
+            const finalH = Math.max(2, (wave + noise) * edgeFade);
+            bar.style.height = `${finalH}px`;
+            bar.style.backgroundColor = '#60a5fa';
+        });
+
+        if(!isMicOn) {
+            const mockDb = -45 + Math.sin(simulationPhase * 0.5) * 15;
+            dbValue.textContent = mockDb.toFixed(1) + ' dBFS';
+            const activeCount = Math.round(((mockDb + 60) / 60) * segments.length);
+            segments.forEach((seg, index) => {
+                if (index < activeCount) seg.classList.remove('inactive');
+                else seg.classList.add('inactive');
+            });
+        }
+    }
+
+    function runWaveform() {
+        if (isSimulating) {
+            simulateWaveform();
+            animationId = requestAnimationFrame(runWaveform);
+        }
+    }
+
+    micBtn.addEventListener('click', async () => {
+        if (isMicOn) {
+            if (audioContext) await audioContext.close();
+            isMicOn = false;
+            isSimulating = true;
+
+            micBtn.textContent = '启动测试';
+            micBtn.classList.remove('btn-primary');
+            micBtn.classList.add('btn-secondary');
+            dbValue.textContent = '-∞ dBFS';
+            segments.forEach(s => s.classList.add('inactive'));
+
+            if(!animationId) runWaveform();
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+            isMicOn = true;
+            isSimulating = false;
+            cancelAnimationFrame(animationId);
+
+            micBtn.textContent = '停止测试';
+            micBtn.classList.remove('btn-secondary');
+            micBtn.classList.add('btn-primary');
+
+            updateRealVolume();
+            showToast('🎤 已接入真实麦克风');
+        } catch (err) {
+            showToast('❌ 无法访问麦克风');
+        }
+    });
+
+    function updateRealVolume() {
+        if (!isMicOn) return;
+
+        analyser.getByteTimeDomainData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+            const x = (dataArray[i] - 128) / 128.0;
+            sum += x * x;
+        }
+        const rms = Math.sqrt(sum / dataArray.length);
+        let db = 20 * Math.log10(rms);
+        if (!isFinite(db) || db < -60) db = -60;
+        if (db > 0) db = 0;
+
+        dbValue.textContent = db.toFixed(1) + ' dBFS';
+
+        const activeCount = Math.round(((db + 60) / 60) * segments.length);
+        segments.forEach((seg, index) => {
+            if (index < activeCount) {
+                seg.classList.remove('inactive');
+                seg.style.backgroundColor = index > 19 ? '#ef4444' : (index > 14 ? '#f59e0b' : '#10b981');
+            } else {
+                seg.classList.add('inactive');
+                seg.style.backgroundColor = '#10b981';
+            }
+        });
+
+        wfBars.forEach((bar, index) => {
+            const dataIndex = Math.floor((index / wfBars.length) * dataArray.length);
+            const value = Math.abs(dataArray[dataIndex] - 128);
+            const normalizedH = (value / 128) * 80;
+
+            const currentH = parseFloat(bar.style.height) || 2;
+            const targetH = Math.max(2, normalizedH);
+            const smoothH = currentH + (targetH - currentH) * 0.5;
+
+            bar.style.height = `${smoothH}px`;
+            bar.style.backgroundColor = db > -6 ? '#ef4444' : '#3b82f6';
+        });
+
+        animationId = requestAnimationFrame(updateRealVolume);
+    }
+</script>
+</body>
+</html>

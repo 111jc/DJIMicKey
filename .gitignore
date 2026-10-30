@@ -1,0 +1,24 @@
+# Generated executables, archives and local verification output
+/dist/
+/.build/
+/bin/
+/obj/
+*.log
+*.trace
+*.dmp
+
+# Editor and operating-system files
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local settings and credentials
+.env
+.env.*
+!.env.example
+settings.ini
