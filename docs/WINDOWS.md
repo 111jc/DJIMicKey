@@ -1,4 +1,4 @@
-# DJI Mic Key 1.9.2
+# DJI Mic Key 1.0.0
 
 轻量 Windows 工具：检测 DJI Mic Mini 接收器、显示麦克风输入电平，并将发射器连接键转换为自定义键盘快捷键。
 

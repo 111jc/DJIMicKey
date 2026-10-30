@@ -4,5 +4,5 @@ using System.Reflection;
 [assembly: AssemblyProduct("DJI Mic Key")]
 [assembly: AssemblyCompany("Vibe Bro")]
 [assembly: AssemblyCopyright("Copyright (c) 2026 Vibe Bro")]
-[assembly: AssemblyVersion("1.9.2.0")]
-[assembly: AssemblyFileVersion("1.9.2.0")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]

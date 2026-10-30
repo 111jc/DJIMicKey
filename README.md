@@ -1,5 +1,7 @@
 # DJI Mic Key
 
+当前公开版本：**v1.0.0**。可从 [GitHub Releases](https://github.com/111jc/DJIMicKey/releases/latest) 下载。
+
 轻量 Windows 工具：将 DJI Mic Mini 发射器的连接键映射成键盘快捷键，并显示接收器状态和麦克风输入电平。适合用麦克风按键切换语音输入。
 
 这是非 DJI 官方的独立工具。目前实测接收器 USB 标识为 **VID_2CA3 / PID_4011**。
