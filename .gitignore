@@ -1,6 +1,7 @@
 # Generated executables, archives and local verification output
 /dist/
 /.build/
+/log/
 /bin/
 /obj/
 *.log

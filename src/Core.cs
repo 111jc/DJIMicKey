@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -204,6 +204,15 @@ namespace DjiMicKey {
         Native.HookProc callback;IntPtr hook;readonly MappingGate gate=new MappingGate();readonly object recordLock=new object();
         readonly Stopwatch clock=Stopwatch.StartNew();readonly ManualResetEvent started=new ManualResetEvent(false),healthAck=new ManualResetEvent(false);readonly Thread thread;uint threadId;Exception startupError;
         ShortcutRecorder recorder;readonly HashSet<ushort> swallowed=new HashSet<ushort>();
+        readonly Dictionary<string,MappingGate> rawGates=new Dictionary<string,MappingGate>();
+        public volatile bool RawSource;
+        public void ResetRaw(){lock(recordLock)rawGates.Clear();}
+        public void ProcessRawVolume(string source,bool down){bool trigger=false;lock(recordLock){
+            if(!RawSource||!Enabled||!Connected||recorder!=null){rawGates.Clear();return;}
+            MappingGate rawGate;if(!rawGates.TryGetValue(source,out rawGate)){rawGate=new MappingGate();rawGates[source]=rawGate;}
+            GateResult result=rawGate.Process(down,true,clock.ElapsedMilliseconds);trigger=result.Trigger;if(down&&SourcePressed!=null)SourcePressed();
+            if(Trace!=null)Trace.Add("RAW DECISION down="+down+" trigger="+trigger+" source="+source);
+        }if(trigger&&Pressed!=null)Pressed();}
         public InputTrace Trace;public bool IsRunning {get{return thread!=null&&thread.IsAlive&&hook!=IntPtr.Zero;}}
         public bool ProbeHealth(){healthAck.Reset();Native.Input down=new Native.Input();down.type=1;down.data.keyboard=new Native.KeyboardInput{vk=0xE8,extra=Native.Marker};Native.Input up=down;up.data.keyboard.flags=2;uint sent=Native.SendInput(2,new[]{down,up},Marshal.SizeOf(typeof(Native.Input)));return sent==2&&healthAck.WaitOne(200);}
         public volatile bool Enabled,Connected;public event Action Pressed;public event Action SourcePressed;bool sourceDown;public event Action<string> RecordingProgress;public event Action<ShortcutSpec,string> RecordingFinished;
@@ -219,8 +228,8 @@ namespace DjiMicKey {
                 // DJI consumer controls are injected by Windows (flags 0x11/0x91).
                 // Ignore our own marker only; filtering LLKHF_INJECTED drops the actual mic key.
                 if(!IsOwnEvent(k)){int msg=message.ToInt32();bool down=msg==0x100||msg==0x104,up=msg==0x101||msg==0x105;ushort key=ShortcutSpec.Normalize(k.vk,k.scan,k.flags);
-                    if(down||up){if(k.vk==0xAF){if(up)sourceDown=false;else if(!sourceDown){sourceDown=true;if(Connected&&SourcePressed!=null)SourcePressed();}}lock(recordLock){if(recorder!=null){if(down)swallowed.Add(key);else swallowed.Remove(key);recorder.Process(key,down);if(recorder.Cancelled){recorder=null;if(RecordingFinished!=null)RecordingFinished(null,"已取消录制。");}else if(recorder.Complete){ShortcutSpec result=recorder.Result;string error=recorder.Error;recorder=null;if(RecordingFinished!=null)RecordingFinished(result,error);}else if(RecordingProgress!=null)RecordingProgress(recorder.Display);return new IntPtr(1);}if(!down&&swallowed.Remove(key))return new IntPtr(1);if(down&&swallowed.Contains(key))return new IntPtr(1);}
-                        if(k.vk==0xAF){GateResult result=gate.Process(down,Enabled&&Connected,clock.ElapsedMilliseconds);if(Trace!=null&&Trace.Active)Trace.Add("DECISION suppress="+result.Suppress+" trigger="+result.Trigger);if(result.Trigger&&Pressed!=null)Pressed();if(result.Suppress)return new IntPtr(1);}
+                    if(down||up){if(k.vk==0xAF&&!RawSource){if(up)sourceDown=false;else if(!sourceDown){sourceDown=true;if(Connected&&SourcePressed!=null)SourcePressed();}}lock(recordLock){if(recorder!=null){if(down)swallowed.Add(key);else swallowed.Remove(key);recorder.Process(key,down);if(recorder.Cancelled){recorder=null;if(RecordingFinished!=null)RecordingFinished(null,"已取消录制。");}else if(recorder.Complete){ShortcutSpec result=recorder.Result;string error=recorder.Error;recorder=null;if(RecordingFinished!=null)RecordingFinished(result,error);}else if(RecordingProgress!=null)RecordingProgress(recorder.Display);return new IntPtr(1);}if(!down&&swallowed.Remove(key))return new IntPtr(1);if(down&&swallowed.Contains(key))return new IntPtr(1);}
+                        if(k.vk==0xAF){GateResult result=gate.Process(down,Enabled&&Connected,clock.ElapsedMilliseconds);if(Trace!=null&&Trace.Active)Trace.Add("DECISION suppress="+result.Suppress+" trigger="+(result.Trigger&&!RawSource));if(result.Trigger&&!RawSource&&Pressed!=null)Pressed();if(result.Suppress)return new IntPtr(1);}
                     }
                 }
             }return Native.CallNextHookEx(hook,code,message,data);

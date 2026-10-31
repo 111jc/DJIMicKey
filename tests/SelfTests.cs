@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -55,6 +55,36 @@ namespace DjiMicKey {
             using(KeyboardMapper healthMapper=new KeyboardMapper()){Check(healthMapper.IsRunning&&healthMapper.ProbeHealth(),"listener health probe is acknowledged and consumed by its native hook");}
             trace.Start();trace.Add("LOWLEVEL media checkpoint");for(int i=0;i<300;i++)trace.Add("RAW packet="+i);Check(trace.Stop().IndexOf("LOWLEVEL media checkpoint",StringComparison.Ordinal)>=0,"raw report bursts preserve key diagnostic decisions");
             DeviceState noAudio=new DeviceState{Hid=true};Check(noAudio.ButtonReady&&!noAudio.Connected,"button mapping readiness is independent of the audio endpoint");
+            Check(RawControlMapper.IsTargetPath(@"\\?\HID#VID_2CA3&PID_4011&MI_00")&&!RawControlMapper.IsTargetPath(@"\\?\HID#VID_2CA3&PID_9999")&&!RawControlMapper.IsTargetPath(@"\\?\HID#VID_1234&PID_4011"),"raw source requires the supported VID and PID");
+            List<byte[]> reports=RawControlMapper.SplitReports(new byte[]{3,0,0,0,2,0,0,0,6,1,0,6,0,0});
+            Check(reports.Count==2&&reports[0][1]==1&&reports[1][1]==0,"multi-report RAWHID retains both press and release");
+            bool badRaw=false;try{RawControlMapper.SplitReports(new byte[]{255,255,255,255,255,255,255,255});}catch(ArgumentException){badRaw=true;}Check(badRaw,"malformed RAWHID cannot overflow or allocate oversized reports");
+            int rawHits=0;using(KeyboardMapper rawMapper=new KeyboardMapper()){
+                rawMapper.RawSource=true;rawMapper.Enabled=true;rawMapper.Connected=true;rawMapper.Pressed+=delegate{Interlocked.Increment(ref rawHits);};
+                rawMapper.ProcessRawVolume("rx/6",true);rawMapper.ProcessRawVolume("rx/6",true);Check(rawHits==0,"raw press and held repeat do not trigger early");
+                rawMapper.ProcessRawVolume("rx/6",false);rawMapper.ProcessRawVolume("rx/6",false);Check(rawHits==1,"raw-only input triggers exactly once on release without any keyboard event");
+                rawMapper.Enabled=false;rawMapper.ProcessRawVolume("rx/6",true);rawMapper.ProcessRawVolume("rx/6",false);Check(rawHits==1,"disabled raw mapping sends nothing");rawMapper.Enabled=true;
+                rawMapper.StartRecording();rawMapper.ProcessRawVolume("rx/6",true);rawMapper.ProcessRawVolume("rx/6",false);rawMapper.CancelRecording();Check(rawHits==1,"shortcut recording pauses raw mapping");
+                rawMapper.ResetRaw();rawMapper.ProcessRawVolume("rx/6",true);rawMapper.ResetRaw();rawMapper.ProcessRawVolume("rx/6",false);Check(rawHits==1,"device removal drops pending raw press instead of fabricating a release trigger");
+                int escapedMixed=0;Native.HookProc mixedSafety=delegate(int code,IntPtr msg,IntPtr data){if(code>=0){Native.Kbd k=(Native.Kbd)Marshal.PtrToStructure(data,typeof(Native.Kbd));if(k.vk==0xAF){escapedMixed++;return new IntPtr(1);}}return Native.CallNextHookEx(IntPtr.Zero,code,msg,data);};
+                // Install safety first, then replace the mapper so its hook runs first.
+                IntPtr guard=Native.SetWindowsHookEx(13,mixedSafety,Native.GetModuleHandle(null),0);if(guard==IntPtr.Zero)throw new Exception("Mixed-source safety hook failed");
+                try{using(KeyboardMapper mixed=new KeyboardMapper()){
+                    mixed.RawSource=true;mixed.Enabled=true;mixed.Connected=true;int mixedHits=0;mixed.Pressed+=delegate{Interlocked.Increment(ref mixedHits);};
+                    Native.Input mediaDown=new Native.Input();mediaDown.type=1;mediaDown.data.keyboard=new Native.KeyboardInput{vk=0xAF,flags=1};Native.Input mediaUp=mediaDown;mediaUp.data.keyboard.flags=3;
+                    Check(Native.SendInput(2,new[]{mediaDown,mediaUp},Marshal.SizeOf(typeof(Native.Input)))==2,"mixed-source keyboard event injection accepted");
+                    Stopwatch settle=Stopwatch.StartNew();while(settle.ElapsedMilliseconds<100){System.Windows.Forms.Application.DoEvents();Thread.Sleep(5);}
+                    Check(mixedHits==0&&escapedMixed==0,"raw mode suppresses duplicate keyboard source without dispatching a second shortcut");
+                    mixed.ProcessRawVolume("rx/6",true);mixed.ProcessRawVolume("rx/6",false);Check(mixedHits==1,"keyboard plus raw input produces one mapping trigger");
+                }}finally{Native.UnhookWindowsHookEx(guard);GC.KeepAlive(mixedSafety);}
+            }
+            using(ShellVolumeGuard shell=new ShellVolumeGuard(new InputTrace(),true)){
+                Check(!shell.TestDecision(12,10),"Shell filter passes volume while disabled");shell.SetEnabled(true);
+                Check(shell.TestDecision(12,10),"native Shell filter handles unhandled Volume Up while armed without issuing a volume command");
+                Check(!shell.TestDecision(12,9)&&!shell.TestDecision(12,8)&&!shell.TestDecision(4,10),"Shell filter preserves Volume Down, mute and unrelated notifications");
+                shell.SetEnabled(false);Check(!shell.TestDecision(12,10),"pausing Shell filter restores original handling immediately");
+                shell.SetEnabled(true);shell.Dispose();Check(!shell.TestDecision(12,10),"destroyed owner disables native Shell filter even if DLL remains loaded");
+            }
             report.AppendLine("TOTAL: "+passed+" passed");File.WriteAllText(path,report.ToString(),Encoding.UTF8);return 0;
         }catch(Exception ex){report.AppendLine(ex.ToString());File.WriteAllText(path,report.ToString(),Encoding.UTF8);return 1;}}
     }

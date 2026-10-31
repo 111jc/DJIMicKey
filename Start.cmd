@@ -1,8 +1,10 @@
 @echo off
 cd /d "%~dp0"
-if not exist "%~dp0dist\DJIMicKey.exe" (
-    echo Run Build.cmd first to create dist\DJIMicKey.exe.
+set "DJI_APP=%~dp0dist\DJIMicKey.exe"
+if exist "%~dp0dist\DJIMicKey-v1.0.2.exe" set "DJI_APP=%~dp0dist\DJIMicKey-v1.0.2.exe"
+if not exist "%DJI_APP%" (
+    echo Run Build.cmd or Release.cmd first.
     pause
     exit /b 1
 )
-start "" "%~dp0dist\DJIMicKey.exe"
+start "" "%DJI_APP%"
