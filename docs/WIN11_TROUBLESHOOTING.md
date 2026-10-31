@@ -1,47 +1,21 @@
-# Win11 配对键仍增加音量的排查
+# Win11 排查
 
-当前状态：用户报告 Win10 正常、Win11 的设备连接和电平正常，但配对键仍增加系统音量。本开发机为 Win10，尚无 Win11 实机事件报告，不能把具体原因或 Win11 修复视为已确认。
+v1.0.2 已由用户确认：配对键可控制微信输入法语音启停，且不再出现原音量条。若其他电脑失败，先核对 EXE 与 Shell DLL 均为同一版本，完整退出旧实例再运行。
 
-## 先采集原始失败状态
+1. 工具保存组合与输入法一致；文本框中用真实键盘验证。
+2. 确认 RX 已连接、映射启用。开始诊断后短按配对键三次，导出到本地 log/。
+3. 不提交私人日志到公开仓库；分享前删除不需要的设备路径/标识。
 
-1. 使用 v1.5.0 诊断版或更新版本，版本号显示在主界面副标题。
-2. 保持接收器已连接、映射已启用，在“显示与启动”点击“开始按键诊断”，事件会实时显示在诊断窗口。
-3. 短按要测试的按键 2 次，每次间隔约 1 秒。
-4. 点击“结束诊断”停止采集；需要时再点击“导出按键诊断”保存报告。30 秒后诊断自动停止。
+| 日志 | 判断 |
+|---|---|
+| HID button ready=False | 接收器未识别，先核对数据连接 |
+| Raw source mapping=True | 正在使用新 Raw 触发链路 |
+| RAW decoded / RAW DECISION trigger=True | 来源解析并触发，继续检查发送 |
+| SEND accepted | Windows 接受注入；不等于输入法确认语音状态 |
+| Shell volume filter: installed=True enabled=True | 音量增加拦截已装载并开启 |
+| SHELL_BLOCK command=10 | 已接管未处理的 Shell 音量增加命令 |
+| Shell filter 错误 | 核对同目录 DLL、版本及完整错误；不要仅凭普通权限推断根因 |
+| Raw 有而 LOWLEVEL 无 | Win11 可能只进入 Raw 路径，新版不依赖其产生键盘事件 |
+| Shell 已命中仍增加音量 | 可能存在额外处理通道，需要新的实际日志；不能只减回固定音量 |
 
-报告仅在用户开启诊断后生成，包含系统构建号、版本、权限、设备就绪状态、VK_POWER、媒体键、WM_APPCOMMAND、DJI 原始 HID 控制报告以及发送状态；不记录普通字符输入、不保存音频、不自动上传。缓冲有上限，原始报告过多时优先保留关键媒体键决策。
-
-## 报告怎样定位问题
-
-| 证据 | 含义 |
-| --- | --- |
-| HID button ready=False | 当前受支持 HID 接口未识别；先检查连接方式、接收器型号和远程会话环境 |
-| Hook thread running=False | 监听线程已停止，点击“重启按键监听” |
-| HOOK probe acknowledged=False | 自检未得到确认，可能是钩子失效或模拟探针被系统阻止；不能仅据此断定钩子失效 |
-| 收到 WM_APPCOMMAND、但没有 LOWLEVEL 键事件 | 检查多媒体命令来源和后续映射策略；当前快捷键拦截器尚未拦截 WM_APPCOMMAND |
-| 收到 LOWLEVEL vk=AF，但 suppress=False | 查看 Enabled、buttonReady 和是否正在快捷键录制 |
-| 原始 RAW DJI HID 报告随按键变化，但没有对应 LOWLEVEL | 当前驱动可能没有走程序使用的键盘事件通道，需要根据报告适配；改目标快捷键未必有效 |
-| suppress=True、trigger=True，但没有 SEND | 查看界面线程状态及是否有未松开的物理修饰键 |
-| SEND accepted，但输入法无响应 | Windows 接受注入不等于输入法确认；检查实际目标快捷键、左右修饰键及权限 |
-| suppress=True 但音量仍变化 | 可能还有额外音量控制通道，需继续核对原始事件与驱动行为 |
-
-低级键盘钩子有可能因超时被系统静默移除，不能把申请成功的句柄当作永久有效。参考 [Microsoft LowLevelKeyboardProc](https://learn.microsoft.com/windows/win32/winmsg/lowlevelkeyboardproc)。
-
-快捷键注入还受 UIPI 约束，但目标窗口权限过高通常只解释发送失败，不能单独解释源音量事件仍然生效。参考 [Microsoft SendInput](https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-sendinput)。
-
-## 恢复和权限对照
-
-保存首次失败报告后，可点击“重启按键监听”再测试。如果重启后恢复，请保留前后两份诊断报告。
-
-如需作权限对照：先选择“完全退出”，再右键 EXE“以管理员身份运行”，重复相同采集步骤。已有普通权限实例运行时，单实例机制可能只恢复那个旧实例；必须先退出。管理员运行仅用于对照，不是已确认修复，也没有改为强制管理员启动。
-
-## 1.5 诊断覆盖范围
-
-诊断会单独记录 VK_POWER 和 WM_APPCOMMAND，不会拦截这两类输入。短按 Mic Mini 发射器电源键的对照结果见 [电源键测试记录](POWER_BUTTON_FINDINGS.md)。
-
-## v1.4 中的相关改进
-
-- 增加 30 秒可导出的限量媒体/HID 诊断和监听健康探针。
-- 增加监听重启入口和界面版本号。
-- 监听线程已停止时显示异常状态。
-- 按键映射就绪与音频端点就绪分开；音频端点名称或状态异常不再单独阻止 HID 按键映射。这是独立的健壮性改进，不表示已定位本次 Win11 故障。
+Shell 事件的 handlerProcessId 只表示执行回调的进程，不代表可靠调用者或物理设备。Shell 拦截范围、限制和文档来源见 SHELL_VOLUME_FILTER.md。

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.2
+
+- Add a user-mode native Shell hook for unhandled Volume Up commands, without changing endpoint volume or installing a driver.
+- Gate the global filter on RX readiness, mapping and recorder state; release on pause/exit; export filter status and hit counts.
+- 73 core checks plus UI regression checks pass. User confirmed Win11 physical-button WeType start/stop without the volume flyout on 2026-10-31; see SHELL_VOLUME_FILTER.md.
+
+## 1.0.1
+
+- Base the local tree on public main 1582fd4, preserving the new UI and diagnostics.
+- Fit main content to the window without horizontal/vertical scrolling; cover narrow windows and DPI transitions.
+- Restore persistent, descriptor-decoded DJI Consumer Raw mapping for the observed Win11 raw-only input path; keyboard and Raw sources cannot both trigger.
+- Fix a disposed shadow callback and verify 68 core checks plus UI/device tests. Physical WeType acceptance of this combined build and native Win11 volume suppression are not claimed.
+
 ## 1.0.0 — First public release
 
 - First public stable release of the DJI Mic Key Windows utility.
